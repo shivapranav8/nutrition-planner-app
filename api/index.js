@@ -1,3 +1,6 @@
+// Log function initialization
+console.log('API function file loaded at:', new Date().toISOString());
+
 const express = require('express');
 const cors = require('cors');
 const OpenAI = require('openai');

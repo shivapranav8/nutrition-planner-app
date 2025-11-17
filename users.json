@@ -1,0 +1,28 @@
+{
+  "user-1762610160238-7mdhxa9id": {
+    "id": "user-1762610160238-7mdhxa9id",
+    "email": "test@example.com",
+    "password": "ecd71870d1963316a97e3ac3408c9835ad8cf0f3c1bc703527c30265534f75ae",
+    "name": "Test User",
+    "sessionToken": "4708244e561fb2fbfa05fa7c9b6a189ede6ae04d1198723b32ba01b1efe7dd42",
+    "apiKeys": {
+      "gemini": "test-gemini-key-12345",
+      "anthropic": "test-anthropic-key-67890",
+      "openai": null
+    },
+    "createdAt": "2025-11-08T13:56:00.238Z"
+  },
+  "user-1762614972952-bggbd3hd7": {
+    "id": "user-1762614972952-bggbd3hd7",
+    "email": "testuser@example.com",
+    "password": "7e6e0c3079a08c5cc6036789b57e951f65f82383913ba1a49ae992544f1b4b6e",
+    "name": "Test User",
+    "sessionToken": "1487ef6f933387f747f4f0827cc103426700f2ff8299104d35f2d1f1a283fbe3",
+    "apiKeys": {
+      "gemini": "user-gemini-key-test123",
+      "anthropic": "user-anthropic-key-test456",
+      "openai": "user-openai-key-test789"
+    },
+    "createdAt": "2025-11-08T15:16:12.956Z"
+  }
+}

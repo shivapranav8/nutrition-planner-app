@@ -594,10 +594,11 @@ app.post('/api/test-parse', (req, res) => {
 });
 
 // Export as Vercel serverless function
+// Vercel rewrites /api/* to /api/*, preserving the path
 module.exports = (req, res) => {
-  // Remove /api prefix from path for Express routing
-  if (req.url.startsWith('/api')) {
-    req.url = req.url.replace('/api', '');
+  // Ensure the path starts with /api for Express routes
+  if (!req.url.startsWith('/api')) {
+    req.url = '/api' + (req.url.startsWith('/') ? req.url : '/' + req.url);
   }
   return app(req, res);
 };

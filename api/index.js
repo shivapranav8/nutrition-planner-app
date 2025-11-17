@@ -637,10 +637,10 @@ module.exports = (req, res) => {
   }
   
   try {
-    // Get the request URL - Vercel passes the path after /api/
-    // For example: /api/health -> req.url = /health
-    // For example: /api/user/123/targets -> req.url = /user/123/targets
-    let requestUrl = req.url || req.path || '/';
+    // Get the request URL - Vercel may pass the path with or without /api prefix
+    // When auto-detecting: /api/health -> might be /api/health or /health
+    // We need to normalize to always have /api prefix for Express routes
+    let requestUrl = req.url || req.path || req.originalUrl || '/';
     
     // Extract query string if present
     let queryString = '';
@@ -656,25 +656,29 @@ module.exports = (req, res) => {
     }
     
     // Express routes are defined with /api prefix
-    // So we need to add /api to the path
+    // If URL doesn't already have /api, add it
     // /health -> /api/health
+    // /api/health -> /api/health (already correct)
     // /user/123/targets -> /api/user/123/targets
-    const normalizedPath = '/api' + requestUrl;
+    let normalizedPath = requestUrl;
+    if (!normalizedPath.startsWith('/api')) {
+      normalizedPath = '/api' + normalizedPath;
+    }
     
     // Update request properties for Express
     req.url = normalizedPath + queryString;
     req.path = normalizedPath;
-    req.originalUrl = req.originalUrl || (normalizedPath + queryString);
     
-    // If originalUrl doesn't have /api, update it
-    if (req.originalUrl && !req.originalUrl.startsWith('/api')) {
+    // Set originalUrl if not already set or if it doesn't have /api
+    if (!req.originalUrl || !req.originalUrl.startsWith('/api')) {
       req.originalUrl = normalizedPath + queryString;
     }
     
     console.log('Normalized for Express:', {
       url: req.url,
       path: req.path,
-      originalUrl: req.originalUrl
+      originalUrl: req.originalUrl,
+      method: req.method
     });
     
     // Handle the request with Express

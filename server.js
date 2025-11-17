@@ -460,6 +460,87 @@ app.delete('/api/user/:userId/logs/:logId', async (req, res) => {
   }
 });
 
+// Generate day plans with breakfast/lunch/dinner using AI
+app.post('/api/generate-day-plans', async (req, res) => {
+  try {
+    const { menuItems, userProfile, remainingCalories, macros, apiKeys } = req.body;
+    
+    const prompt = `You are a nutrition expert. Based on the available menu items and user profile, create 3 complete day plans. Each day plan should include breakfast, lunch, and dinner.
+
+Available Menu Items:
+${menuItems.map((item, idx) => `${idx + 1}. ${item.name} (${item.calories} cal, ${item.protein}g protein, ${item.carbs}g carbs, ${item.fats}g fats)`).join('\n')}
+
+User Profile:
+- Age: ${userProfile.age}
+- Gender: ${userProfile.gender}
+- Height: ${userProfile.height}cm
+- Weight: ${userProfile.weight}kg
+- Activity Level: ${userProfile.activityLevel}
+- Goal: ${userProfile.goal}
+
+Current Status:
+- Remaining Calories: ${remainingCalories}
+- Protein Target: ${macros.protein}g
+- Carbs Target: ${macros.carbs}g
+- Fats Target: ${macros.fats}g
+
+Please create 3 different day plans. Each day plan should:
+1. Include breakfast, lunch, and dinner
+2. Use items from the available menu items
+3. Fit within the remaining calorie budget
+4. Help meet macro targets
+5. Provide variety across the 3 plans
+6. Focus on Indian cuisine
+
+For each day plan, provide:
+- Plan name
+- Breakfast: item name, calories, protein, carbs, fats
+- Lunch: item name, calories, protein, carbs, fats
+- Dinner: item name, calories, protein, carbs, fats
+- Total calories, protein, carbs, fats for the day
+
+Format as JSON array with 3 objects. Each object should have:
+{
+  "name": "Day Plan Name",
+  "breakfast": { "name": "...", "calories": ..., "protein": ..., "carbs": ..., "fats": ... },
+  "lunch": { "name": "...", "calories": ..., "protein": ..., "carbs": ..., "fats": ... },
+  "dinner": { "name": "...", "calories": ..., "protein": ..., "carbs": ..., "fats": ... },
+  "totalCalories": ...,
+  "totalProtein": ...,
+  "totalCarbs": ...,
+  "totalFats": ...
+}`;
+
+    const openaiClient = getOpenAIClient(apiKeys);
+    const completion = await openaiClient.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        {
+          role: "system",
+          content: "You are a nutrition expert specializing in Indian cuisine and meal planning. Create complete day plans with breakfast, lunch, and dinner."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 2000
+    });
+
+    const dayPlans = JSON.parse(completion.choices[0].message.content);
+    
+    res.json({ dayPlans });
+  } catch (error) {
+    console.error('OpenAI API error:', error);
+    if (error.message && error.message.includes('API key is required')) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: 'Failed to generate day plans' });
+    }
+  }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });

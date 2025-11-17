@@ -2,6 +2,7 @@
       "name": "Nutrition Planner App",
       "version": "0.1.0",
       "private": true,
+      "description": "A modern, AI-powered nutrition planning application",
       "dependencies": {
             "@anthropic-ai/sdk": "^0.67.0",
             "@capacitor/app": "^7.1.0",

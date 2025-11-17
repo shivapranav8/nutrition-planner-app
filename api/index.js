@@ -613,26 +613,42 @@ app.use((req, res) => {
 // Vercel automatically routes /api/* to /api/index.js
 // The req.url behavior varies - it might be /health or /api/health
 // Express routes are defined with /api prefix, so we normalize it
-module.exports = (req, res) => {
-  // Log for debugging
-  console.log('Request received:', {
-    method: req.method,
-    originalUrl: req.url,
-    path: req.path,
-    baseUrl: req.baseUrl,
-    headers: req.headers
-  });
-  
-  // Normalize the URL to always have /api prefix for Express routes
-  const originalUrl = req.url || req.path || '';
-  
-  if (!originalUrl.startsWith('/api')) {
-    // Add /api prefix if missing
-    req.url = '/api' + (originalUrl.startsWith('/') ? originalUrl : '/' + originalUrl);
-    if (req.path) {
-      req.path = '/api' + (req.path.startsWith('/') ? req.path : '/' + req.path);
+module.exports = async (req, res) => {
+  try {
+    // Log for debugging - this should appear in Vercel function logs
+    console.log('=== API Function Invoked ===');
+    console.log('Request received:', {
+      method: req.method,
+      url: req.url,
+      path: req.path,
+      originalUrl: req.originalUrl,
+      baseUrl: req.baseUrl,
+      query: req.query
+    });
+    
+    // Normalize the URL to always have /api prefix for Express routes
+    const originalUrl = req.url || req.path || '';
+    
+    if (!originalUrl.startsWith('/api')) {
+      // Add /api prefix if missing
+      req.url = '/api' + (originalUrl.startsWith('/') ? originalUrl : '/' + originalUrl);
+      if (req.path) {
+        req.path = '/api' + (req.path.startsWith('/') ? req.path : '/' + req.path);
+      }
+    }
+    
+    console.log('Normalized URL:', req.url);
+    
+    // Handle the request with Express
+    return app(req, res);
+  } catch (error) {
+    console.error('Error in serverless function:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        error: 'Internal server error',
+        message: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
     }
   }
-  
-  return app(req, res);
 };

@@ -617,6 +617,7 @@ app.use((req, res) => {
 // The req.url will be the path AFTER /api (e.g., /api/health -> /health)
 // Express routes are defined with /api prefix, so we need to normalize the URL
 module.exports = (req, res) => {
+  // Immediate response test - if this works, the function is being invoked
   // Log for debugging - this should appear in Vercel function logs
   console.log('=== API Function Invoked ===');
   console.log('Request received:', {
@@ -624,9 +625,16 @@ module.exports = (req, res) => {
     url: req.url,
     path: req.path,
     originalUrl: req.originalUrl,
-    query: req.query,
-    headers: req.headers
+    query: req.query
   });
+  
+  // Handle OPTIONS requests for CORS preflight
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    return res.status(200).end();
+  }
   
   try {
     // Vercel strips the /api prefix when routing to /api/index.js

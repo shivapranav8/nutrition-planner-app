@@ -325,10 +325,21 @@ export const generateDayPlans = async (
 // Health check
 export const checkServerHealth = async (): Promise<boolean> => {
   try {
+    // The api instance already has baseURL set, so '/health' becomes '/api/health'
     const response = await api.get('/health');
+    console.log('Health check response:', response.data);
     return response.data.status === 'OK';
-  } catch (error) {
+  } catch (error: any) {
     console.error('Server health check failed:', error);
+    console.error('Health check attempted URL:', API_BASE_URL + '/health');
+    console.error('Error details:', {
+      message: error?.message,
+      status: error?.response?.status,
+      statusText: error?.response?.statusText,
+      data: error?.response?.data,
+      url: error?.config?.url,
+      baseURL: error?.config?.baseURL
+    });
     return false;
   }
 };

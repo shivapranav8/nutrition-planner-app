@@ -45,7 +45,7 @@ This guide will help you deploy your Nutrition Planner App to Vercel.
 1. **Push code to Git**:
    ```bash
    git add .
-   git commit -m "Ready for Vercel deployment"
+   git commit -m "Update for Vercel deployment"
    git push
    ```
 

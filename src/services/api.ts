@@ -9,10 +9,17 @@ const getApiBaseUrl = () => {
     return import.meta.env.VITE_API_URL;
   }
   
-  // Check if we're in development mode
-  // import.meta.env.DEV is true in dev, false in production builds
-  // import.meta.env.PROD is true in production builds, false in dev
-  if (import.meta.env.DEV || import.meta.env.MODE === 'development') {
+  // Check if we're running on localhost (development)
+  // This is more reliable than checking env.DEV in Vercel builds
+  const isLocalhost = typeof window !== 'undefined' && 
+    (window.location.hostname === 'localhost' || 
+     window.location.hostname === '127.0.0.1' ||
+     window.location.hostname === '');
+  
+  // Also check Vite's environment variables as fallback
+  const isDev = import.meta.env.DEV || import.meta.env.MODE === 'development';
+  
+  if (isLocalhost && isDev) {
     return 'http://localhost:3001/api';
   }
   

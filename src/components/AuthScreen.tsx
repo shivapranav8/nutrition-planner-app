@@ -9,9 +9,34 @@ interface AuthScreenProps {
   onAuthSuccess: (user: { id: string; email: string; name: string; picture?: string }) => void;
 }
 
+// Helper function to get API base URL (same logic as api.ts)
+const getApiBaseUrl = () => {
+  // If explicitly set via environment variable, use it
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  
+  // Check if we're running on localhost (development)
+  const isLocalhost = typeof window !== 'undefined' && 
+    (window.location.hostname === 'localhost' || 
+     window.location.hostname === '127.0.0.1' ||
+     window.location.hostname === '');
+  
+  // Also check Vite's environment variables as fallback
+  const isDev = import.meta.env.DEV || import.meta.env.MODE === 'development';
+  
+  if (isLocalhost && isDev) {
+    return 'http://localhost:3001/api';
+  }
+  
+  // Production: use relative path (works with Vercel)
+  return '/api';
+};
+
 function AuthScreenContent({ onAuthSuccess }: AuthScreenProps) {
   // Get redirect URI without any whitespace
   const redirectUri = window.location.origin.trim();
+  const apiBaseUrl = getApiBaseUrl();
   const [isSignIn, setIsSignIn] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
@@ -47,7 +72,7 @@ function AuthScreenContent({ onAuthSuccess }: AuthScreenProps) {
 
         // Send to backend to create/update user
         const backendResponse = await axios.post(
-          "http://localhost:3001/api/auth/google",
+          `${apiBaseUrl}/auth/google`,
           {
             googleId: userData.id,
             email: userData.email,
@@ -113,8 +138,8 @@ function AuthScreenContent({ onAuthSuccess }: AuthScreenProps) {
     setError("");
 
     try {
-      const endpoint = isSignIn ? "/api/auth/signin" : "/api/auth/signup";
-      const response = await axios.post(`http://localhost:3001${endpoint}`, {
+      const endpoint = isSignIn ? "/auth/signin" : "/auth/signup";
+      const response = await axios.post(`${apiBaseUrl}${endpoint}`, {
         email: formData.email,
         password: formData.password,
         ...(isSignIn ? {} : { fullName: formData.fullName }),

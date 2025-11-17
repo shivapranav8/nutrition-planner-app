@@ -614,25 +614,33 @@ app.use((req, res) => {
 
 // Export as Vercel serverless function
 // Vercel automatically routes /api/* to /api/index.js
-// When Vercel routes /api/health to this function, req.url will be /health (without /api prefix)
+// The req.url will be the path AFTER /api (e.g., /api/health -> /health)
 // Express routes are defined with /api prefix, so we need to normalize the URL
-module.exports = async (req, res) => {
+module.exports = (req, res) => {
+  // Log for debugging - this should appear in Vercel function logs
+  console.log('=== API Function Invoked ===');
+  console.log('Request received:', {
+    method: req.method,
+    url: req.url,
+    path: req.path,
+    originalUrl: req.originalUrl,
+    query: req.query,
+    headers: req.headers
+  });
+  
   try {
-    // Log for debugging - this should appear in Vercel function logs
-    console.log('=== API Function Invoked ===');
-    console.log('Request received:', {
-      method: req.method,
-      url: req.url,
-      path: req.path,
-      originalUrl: req.originalUrl,
-      baseUrl: req.baseUrl,
-      query: req.query
-    });
-    
     // Vercel strips the /api prefix when routing to /api/index.js
     // So /api/health becomes /health in req.url
     // We need to add /api back for Express routes
-    let requestUrl = req.url || req.path || req.originalUrl || '/';
+    let requestUrl = req.url || req.path || '/';
+    let queryString = '';
+    
+    // Extract query string if present
+    if (requestUrl.includes('?')) {
+      const parts = requestUrl.split('?');
+      requestUrl = parts[0];
+      queryString = '?' + parts[1];
+    }
     
     // Ensure URL starts with /
     if (!requestUrl.startsWith('/')) {
@@ -641,18 +649,21 @@ module.exports = async (req, res) => {
     
     // If URL doesn't start with /api, add it
     if (!requestUrl.startsWith('/api')) {
-      req.url = '/api' + requestUrl;
-      req.path = '/api' + requestUrl;
-      // Set originalUrl if not already set
-      if (!req.originalUrl || !req.originalUrl.startsWith('/api')) {
-        req.originalUrl = '/api' + requestUrl;
+      const normalizedPath = '/api' + requestUrl;
+      req.url = normalizedPath + queryString;
+      req.path = normalizedPath;
+      // Preserve originalUrl
+      if (!req.originalUrl) {
+        req.originalUrl = normalizedPath + queryString;
+      } else if (!req.originalUrl.startsWith('/api')) {
+        req.originalUrl = normalizedPath + queryString;
       }
     } else {
-      // URL already has /api prefix, ensure all properties are set
-      req.url = requestUrl;
+      // URL already has /api prefix
+      req.url = requestUrl + queryString;
       req.path = requestUrl;
       if (!req.originalUrl) {
-        req.originalUrl = requestUrl;
+        req.originalUrl = requestUrl + queryString;
       }
     }
     
@@ -663,7 +674,6 @@ module.exports = async (req, res) => {
     });
     
     // Handle the request with Express
-    // Don't return - Express handles the response asynchronously
     app(req, res);
   } catch (error) {
     console.error('Error in serverless function:', error);

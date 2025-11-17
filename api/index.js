@@ -613,14 +613,14 @@ app.use((req, res) => {
 });
 
 // Export as Vercel serverless function
-// Vercel automatically routes /api/* to /api/index.js
-// The req.url will be the path AFTER /api (e.g., /api/health -> /health)
-// Express routes are defined with /api prefix, so we need to normalize the URL
+// When using routes in vercel.json: /api/(.*) -> /api/index.js
+// Vercel passes the matched path (after /api/) to req.url
+// So /api/health becomes /health in req.url
+// Express routes are defined with /api prefix, so we need to normalize
 module.exports = (req, res) => {
-  // Immediate response test - if this works, the function is being invoked
-  // Log for debugging - this should appear in Vercel function logs
+  // Log for debugging
   console.log('=== API Function Invoked ===');
-  console.log('Request received:', {
+  console.log('Original request:', {
     method: req.method,
     url: req.url,
     path: req.path,
@@ -637,13 +637,13 @@ module.exports = (req, res) => {
   }
   
   try {
-    // Vercel strips the /api prefix when routing to /api/index.js
-    // So /api/health becomes /health in req.url
-    // We need to add /api back for Express routes
+    // Get the request URL - Vercel passes the path after /api/
+    // For example: /api/health -> req.url = /health
+    // For example: /api/user/123/targets -> req.url = /user/123/targets
     let requestUrl = req.url || req.path || '/';
-    let queryString = '';
     
     // Extract query string if present
+    let queryString = '';
     if (requestUrl.includes('?')) {
       const parts = requestUrl.split('?');
       requestUrl = parts[0];
@@ -655,27 +655,23 @@ module.exports = (req, res) => {
       requestUrl = '/' + requestUrl;
     }
     
-    // If URL doesn't start with /api, add it
-    if (!requestUrl.startsWith('/api')) {
-      const normalizedPath = '/api' + requestUrl;
-      req.url = normalizedPath + queryString;
-      req.path = normalizedPath;
-      // Preserve originalUrl
-      if (!req.originalUrl) {
-        req.originalUrl = normalizedPath + queryString;
-      } else if (!req.originalUrl.startsWith('/api')) {
-        req.originalUrl = normalizedPath + queryString;
-      }
-    } else {
-      // URL already has /api prefix
-      req.url = requestUrl + queryString;
-      req.path = requestUrl;
-      if (!req.originalUrl) {
-        req.originalUrl = requestUrl + queryString;
-      }
+    // Express routes are defined with /api prefix
+    // So we need to add /api to the path
+    // /health -> /api/health
+    // /user/123/targets -> /api/user/123/targets
+    const normalizedPath = '/api' + requestUrl;
+    
+    // Update request properties for Express
+    req.url = normalizedPath + queryString;
+    req.path = normalizedPath;
+    req.originalUrl = req.originalUrl || (normalizedPath + queryString);
+    
+    // If originalUrl doesn't have /api, update it
+    if (req.originalUrl && !req.originalUrl.startsWith('/api')) {
+      req.originalUrl = normalizedPath + queryString;
     }
     
-    console.log('Normalized URL:', {
+    console.log('Normalized for Express:', {
       url: req.url,
       path: req.path,
       originalUrl: req.originalUrl
@@ -685,11 +681,12 @@ module.exports = (req, res) => {
     app(req, res);
   } catch (error) {
     console.error('Error in serverless function:', error);
+    console.error('Error stack:', error.stack);
     if (!res.headersSent) {
       res.status(500).json({ 
         error: 'Internal server error',
         message: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        details: process.env.NODE_ENV === 'development' ? error.stack : 'Check server logs'
       });
     }
   }

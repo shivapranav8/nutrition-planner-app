@@ -593,17 +593,34 @@ app.post('/api/test-parse', (req, res) => {
   }
 });
 
+// Add a catch-all route for debugging (should be last)
+app.use((req, res) => {
+  console.log('No route matched:', {
+    method: req.method,
+    url: req.url,
+    path: req.path,
+    originalUrl: req.originalUrl
+  });
+  res.status(404).json({ 
+    error: 'Route not found',
+    method: req.method,
+    url: req.url,
+    path: req.path
+  });
+});
+
 // Export as Vercel serverless function
 // Vercel automatically routes /api/* to /api/index.js
 // The req.url behavior varies - it might be /health or /api/health
 // Express routes are defined with /api prefix, so we normalize it
 module.exports = (req, res) => {
-  // Log for debugging (remove in production if needed)
+  // Log for debugging
   console.log('Request received:', {
     method: req.method,
     originalUrl: req.url,
     path: req.path,
-    baseUrl: req.baseUrl
+    baseUrl: req.baseUrl,
+    headers: req.headers
   });
   
   // Normalize the URL to always have /api prefix for Express routes
@@ -612,7 +629,9 @@ module.exports = (req, res) => {
   if (!originalUrl.startsWith('/api')) {
     // Add /api prefix if missing
     req.url = '/api' + (originalUrl.startsWith('/') ? originalUrl : '/' + originalUrl);
-    req.path = '/api' + (req.path?.startsWith('/') ? req.path : '/' + (req.path || ''));
+    if (req.path) {
+      req.path = '/api' + (req.path.startsWith('/') ? req.path : '/' + req.path);
+    }
   }
   
   return app(req, res);

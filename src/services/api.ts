@@ -1,6 +1,26 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3001/api' : '/api');
+// Determine API base URL
+// In production (Vercel), use relative path /api
+// In development, use localhost
+const getApiBaseUrl = () => {
+  // If explicitly set via environment variable, use it
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  
+  // Check if we're in development mode
+  // import.meta.env.DEV is true in dev, false in production builds
+  // import.meta.env.PROD is true in production builds, false in dev
+  if (import.meta.env.DEV || import.meta.env.MODE === 'development') {
+    return 'http://localhost:3001/api';
+  }
+  
+  // Production: use relative path (works with Vercel)
+  return '/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 // Create axios instance with default config
 const api = axios.create({

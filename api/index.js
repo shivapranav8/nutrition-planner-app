@@ -595,6 +595,22 @@ app.post('/api/test-parse', (req, res) => {
 
 // Export as Vercel serverless function
 // Vercel automatically routes /api/* to /api/index.js
-// The req.url will include the full path (e.g., /api/health)
-// Express routes are defined with /api prefix, so this should work directly
-module.exports = app;
+// The req.url will be the path AFTER /api (e.g., /health for /api/health)
+// But Express routes are defined with /api prefix, so we need to add it back
+module.exports = (req, res) => {
+  // Store original URL
+  const originalUrl = req.url;
+  
+  // If the URL doesn't start with /api, add it
+  // This handles Vercel's routing where /api/health becomes /health in req.url
+  if (!originalUrl.startsWith('/api')) {
+    req.url = '/api' + (originalUrl.startsWith('/') ? originalUrl : '/' + originalUrl);
+  }
+  
+  // Also update the baseUrl if needed
+  if (!req.baseUrl) {
+    req.baseUrl = '';
+  }
+  
+  return app(req, res);
+};

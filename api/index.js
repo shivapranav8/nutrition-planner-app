@@ -614,8 +614,8 @@ app.use((req, res) => {
 
 // Export as Vercel serverless function
 // Vercel automatically routes /api/* to /api/index.js
-// The req.url behavior varies - it might be /health or /api/health
-// Express routes are defined with /api prefix, so we normalize it
+// When Vercel routes /api/health to this function, req.url will be /health (without /api prefix)
+// Express routes are defined with /api prefix, so we need to normalize the URL
 module.exports = async (req, res) => {
   try {
     // Log for debugging - this should appear in Vercel function logs
@@ -629,21 +629,42 @@ module.exports = async (req, res) => {
       query: req.query
     });
     
-    // Normalize the URL to always have /api prefix for Express routes
-    const originalUrl = req.url || req.path || '';
+    // Vercel strips the /api prefix when routing to /api/index.js
+    // So /api/health becomes /health in req.url
+    // We need to add /api back for Express routes
+    let requestUrl = req.url || req.path || req.originalUrl || '/';
     
-    if (!originalUrl.startsWith('/api')) {
-      // Add /api prefix if missing
-      req.url = '/api' + (originalUrl.startsWith('/') ? originalUrl : '/' + originalUrl);
-      if (req.path) {
-        req.path = '/api' + (req.path.startsWith('/') ? req.path : '/' + req.path);
+    // Ensure URL starts with /
+    if (!requestUrl.startsWith('/')) {
+      requestUrl = '/' + requestUrl;
+    }
+    
+    // If URL doesn't start with /api, add it
+    if (!requestUrl.startsWith('/api')) {
+      req.url = '/api' + requestUrl;
+      req.path = '/api' + requestUrl;
+      // Set originalUrl if not already set
+      if (!req.originalUrl || !req.originalUrl.startsWith('/api')) {
+        req.originalUrl = '/api' + requestUrl;
+      }
+    } else {
+      // URL already has /api prefix, ensure all properties are set
+      req.url = requestUrl;
+      req.path = requestUrl;
+      if (!req.originalUrl) {
+        req.originalUrl = requestUrl;
       }
     }
     
-    console.log('Normalized URL:', req.url);
+    console.log('Normalized URL:', {
+      url: req.url,
+      path: req.path,
+      originalUrl: req.originalUrl
+    });
     
     // Handle the request with Express
-    return app(req, res);
+    // Don't return - Express handles the response asynchronously
+    app(req, res);
   } catch (error) {
     console.error('Error in serverless function:', error);
     if (!res.headersSent) {
